@@ -52,6 +52,7 @@ struct ManifestAsset {
     std::string md5;
     std::string path;
     bool compressed;
+    bool isInCompress;
     float size;
     int downloadState;
 };

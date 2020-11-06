@@ -514,6 +514,7 @@ bool AssetsManagerEx::decompress(const std::string &zip)
     // Buffer to hold data read from the zip file
     char readBuffer[BUFFER_SIZE];
     // Loop to extract all files.
+    CCLOG("AssetsManagerEx-decompress-global_info: %i \n", global_info.number_entry);
     uLong i;
     for (i = 0; i < global_info.number_entry; ++i)
     {
@@ -534,6 +535,9 @@ bool AssetsManagerEx::decompress(const std::string &zip)
             return false;
         }
         const std::string fullPath = rootPath + fileName;
+
+        // CCLOG("AssetsManagerEx-decompress-fileName-%lu: %s \n", i, fileName);
+        // CCLOG("AssetsManagerEx-decompress-fullPath-%lu: %s \n", i, fullPath.c_str());
 
         // Check if this entry is a directory or a file.
         const size_t filenameLength = strlen(fileName);
@@ -635,6 +639,8 @@ void AssetsManagerEx::decompressDownloadedZip(const std::string &customId, const
     asyncData->zipFile = storagePath;
     asyncData->succeed = false;
 
+    CCLOG("AssetsManagerEx-decompressDownloadedZip: %s\n", storagePath.c_str());
+
     std::function<void(void*)> decompressFinished = [this](void* param) {
         auto dataInner = reinterpret_cast<AsyncData*>(param);
         if (dataInner->succeed)
@@ -655,6 +661,7 @@ void AssetsManagerEx::decompressDownloadedZip(const std::string &customId, const
         // Decompress all compressed files
         if (decompress(asyncData->zipFile))
         {
+            CCLOG("AssetsManagerEx-enqueue-decompress\n");
             asyncData->succeed = true;
         }
         _fileUtils->removeFile(asyncData->zipFile);
@@ -836,6 +843,8 @@ void AssetsManagerEx::prepareUpdate()
         _totalWaitToDownload = _totalToDownload = (int)_downloadUnits.size();
         _downloadResumed = true;
 
+        CCLOG("prepareUpdate-downloadUnits: %i", _downloadUnits.size());
+
         // Collect total size
         for(auto iter : _downloadUnits)
         {
@@ -878,7 +887,8 @@ void AssetsManagerEx::prepareUpdate()
             for (auto it = diff_map.begin(); it != diff_map.end(); ++it)
             {
                 Manifest::AssetDiff diff = it->second;
-                if (diff.type != Manifest::DiffType::DELETED)
+                CCLOG("prepareUpdate-diff: %s, %s", diff.asset.isInCompress ? "TRUE" : "FALSE", it->first.c_str());
+                if (diff.type != Manifest::DiffType::DELETED && !diff.asset.isInCompress)
                 {
                     std::string path = diff.asset.path;
                     DownloadUnit unit;
@@ -897,6 +907,7 @@ void AssetsManagerEx::prepareUpdate()
             _tempManifest->saveToFile(_tempManifestPath);
 
             _totalWaitToDownload = _totalToDownload = (int)_downloadUnits.size();
+            CCLOG("prepareUpdate-totalWaitToDownload: %i", _totalWaitToDownload);
         }
     }
     _updateState = State::READY_TO_UPDATE;
@@ -1165,6 +1176,7 @@ void AssetsManagerEx::downloadFailedAssets()
 
 void AssetsManagerEx::fileError(const std::string& identifier, const std::string& errorStr, int errorCode, int errorCodeInternal)
 {
+    CCLOG("fileError: %s", identifier.c_str());
     auto unitIt = _downloadUnits.find(identifier);
     // Found unit and add it to failed units
     if (unitIt != _downloadUnits.end())
@@ -1292,6 +1304,7 @@ void AssetsManagerEx::onProgress(double total, double downloaded, const std::str
 
 void AssetsManagerEx::onSuccess(const std::string &/*srcUrl*/, const std::string &storagePath, const std::string &customId)
 {
+    CCLOG("AssetsManagerEx-onSuccess: %s\n", customId.c_str());
     if (customId == VERSION_ID)
     {
         _updateState = State::VERSION_LOADED;
@@ -1319,6 +1332,7 @@ void AssetsManagerEx::onSuccess(const std::string &/*srcUrl*/, const std::string
         if (ok)
         {
             bool compressed = assetIt != assets.end() ? assetIt->second.compressed : false;
+            CCLOG("AssetsManagerEx-onSuccess-compressed: %s",compressed ? "TRUE" : "FALSE");
             if (compressed)
             {
                 decompressDownloadedZip(customId, storagePath);
@@ -1397,6 +1411,7 @@ void AssetsManagerEx::onDownloadUnitsFinished()
     // Always save current download manifest information for resuming
     _tempManifest->saveToFile(_tempManifestPath);
     
+    CCLOG("onDownloadUnitsFinished: %i", _failedUnits.size());
     // Finished with error check
     if (_failedUnits.size() > 0)
     {

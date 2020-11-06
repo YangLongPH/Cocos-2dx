@@ -46,6 +46,7 @@
 #define KEY_MD5                 "md5"
 #define KEY_GROUP               "group"
 #define KEY_COMPRESSED          "compressed"
+#define KEY_IN_COMPRESSED       "isInCompress"
 #define KEY_SIZE                "size"
 #define KEY_COMPRESSED_FILE     "compressedFile"
 #define KEY_DOWNLOAD_STATE      "downloadState"
@@ -326,11 +327,12 @@ std::unordered_map<std::string, Manifest::AssetDiff> Manifest::genDiff(const Man
 
 void Manifest::genResumeAssetsList(DownloadUnits *units) const
 {
+    CCLOG("genResumeAssetsList-units-before-length: %s", units->size());
     for (auto it = _assets.begin(); it != _assets.end(); ++it)
     {
         Asset asset = it->second;
-        
-        if (asset.downloadState != DownloadState::SUCCESSED && asset.downloadState != DownloadState::UNMARKED)
+        CCLOG("genResumeAssetsList: %s, %s", asset.isInCompress? "TRUE": "FALSE", asset.path.c_str());
+        if (asset.downloadState != DownloadState::SUCCESSED && asset.downloadState != DownloadState::UNMARKED && !asset.isInCompress)
         {
             DownloadUnit unit;
             unit.customId = it->first;
@@ -340,6 +342,7 @@ void Manifest::genResumeAssetsList(DownloadUnits *units) const
             units->emplace(unit.customId, unit);
         }
     }
+    CCLOG("genResumeAssetsList-units-after-length: %s", units->size());
 }
 
 std::vector<std::string> Manifest::getSearchPaths() const
@@ -503,6 +506,15 @@ Manifest::Asset Manifest::parseAsset(const std::string &path, const rapidjson::V
         asset.compressed = json[KEY_COMPRESSED].GetBool();
     }
     else asset.compressed = false;
+
+//    CCLOG("ParseManifest-KEY_IN_COMPRESSED: %s, %s, %s", KEY_IN_COMPRESSED, json.HasMember(KEY_IN_COMPRESSED)? "TRUE": "FALSE", json[KEY_IN_COMPRESSED].GetBool() ? "TRUE": "FALSE");
+    if ( json.HasMember(KEY_IN_COMPRESSED) && json[KEY_IN_COMPRESSED].IsBool() )
+    {
+        asset.isInCompress = json[KEY_IN_COMPRESSED].GetBool();
+        // CCLOG("ParseManifest-KEY_IN_COMPRESSED-value: %s", asset.isInCompress ? "TRUE": "FALSE");
+    }
+    else asset.isInCompress = false;
+    
     
     if ( json.HasMember(KEY_SIZE) && json[KEY_SIZE].IsInt() )
     {
@@ -576,6 +588,7 @@ void Manifest::loadVersion(const rapidjson::Document &json)
 
 void Manifest::loadManifest(const rapidjson::Document &json)
 {
+    CCLOG("loadManifest");
     loadVersion(json);
     
     // Retrieve package url
@@ -605,6 +618,7 @@ void Manifest::loadManifest(const rapidjson::Document &json)
     }
     
     // Retrieve all search paths
+    CCLOG("KEY_SEARCH_PATHS-Has: %s", json.HasMember(KEY_SEARCH_PATHS) ? "TRUE":"FALSE");
     if ( json.HasMember(KEY_SEARCH_PATHS) )
     {
         const rapidjson::Value& paths = json[KEY_SEARCH_PATHS];
@@ -612,6 +626,7 @@ void Manifest::loadManifest(const rapidjson::Document &json)
         {
             for (rapidjson::SizeType i = 0; i < paths.Size(); ++i)
             {
+                // CCLOG("KEY_SEARCH_PATHS: %s", paths[i].GetString());
                 if (paths[i].IsString()) {
                     _searchPaths.push_back(paths[i].GetString());
                 }

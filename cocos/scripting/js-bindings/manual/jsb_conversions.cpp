@@ -2777,6 +2777,7 @@ bool ManifestAsset_to_seval(const cocos2d::extension::ManifestAsset& v, se::Valu
     obj->setProperty("md5", se::Value(v.md5));
     obj->setProperty("path", se::Value(v.path));
     obj->setProperty("compressed", se::Value(v.compressed));
+    obj->setProperty("isInCompress", se::Value(v.isInCompress));
     obj->setProperty("size", se::Value(v.size));
     obj->setProperty("downloadState", se::Value(v.downloadState));
     ret->setObject(obj);

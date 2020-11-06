@@ -1265,7 +1265,7 @@ int WebSocketImpl::onClientReceivedData(void* in, ssize_t len)
         std::shared_ptr<std::atomic<bool>> isDestroyed = _isDestroyed;
         __wsHelper->sendMessageToCocosThread([this, frameData, frameSize, isBinary, isDestroyed](){
             // In UI thread
-            LOGD("Notify data len %d to Cocos thread.\n", (int)frameSize);
+            // LOGD("Notify data len %d to Cocos thread.\n", (int)frameSize);
 
             cocos2d::network::WebSocket::Data data;
             data.isBinary = isBinary;
